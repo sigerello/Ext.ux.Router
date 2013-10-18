@@ -212,10 +212,11 @@ Ext.define('Ext.ux.Router', {
 
     /**
      * Receives a url token and goes trough each of of the defined route objects searching
-     * for a match.
+     * for a match. If a match is found an object is returned with the fields route, token and params.
+     * If no match is found false is returned.
      * @private
      */
-    parse: function(token) {
+    parseToken: function(token) {
         var route, matches, params, names, j, param, value, rules,
             tokenArgs, tokenWithoutArgs,
             me      = this,
@@ -236,10 +237,7 @@ Ext.define('Ext.ux.Router', {
                 
                 if (matches) {
                     matches = matches.slice(1);
-                    
-                    if (me.dispatch(token, route, matches)) {
-                        return { captures: matches };
-                    }
+                    return {route:route, token:token, params:matches};
                 }
             }
             else {
@@ -272,13 +270,34 @@ Ext.define('Ext.ux.Router', {
                         params = Ext.applyIf(params, Ext.Object.fromQueryString(tokenArgs));
                     }
                     
-                    if (matches && me.dispatch(token, route, params)) {
-                        return params;
+                    if (matches) {
+                        return {route:route, token:token, params:params};
                     }
                 }
             }
+
         }
-        
+
+        return false;
+    },
+
+    /**
+     * Receives a url token and goes trough each of of the defined route objects searching
+     * for a match. If a route is found it is dispatched and returned, else false is returned.
+     * @private
+     */
+    parse: function(token) {
+        var me = this;
+        var data = me.parseToken(token);
+
+        if(data && me.dispatch(data.token, data.route, data.params)) {
+            if(data.route.regex) {
+                return { captures: data.params};
+            } else {
+                return data.params;
+            }
+        }
+
         me.fireEvent('routemissed', token);
         return false;
     },
